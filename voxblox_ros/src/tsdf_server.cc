@@ -30,7 +30,7 @@ TsdfServer::TsdfServer(const ros::NodeHandle& nh,
       use_freespace_pointcloud_(false),
       color_map_(new RainbowColorMap()),
       publish_pointclouds_on_update_(false),
-      publish_slices_(false),
+      publish_slices_(true),
       publish_pointclouds_(false),
       publish_tsdf_map_(false),
       cache_mesh_(false),
@@ -56,8 +56,10 @@ TsdfServer::TsdfServer(const ros::NodeHandle& nh,
 
   nh_private_.param("pointcloud_queue_size", pointcloud_queue_size_,
                     pointcloud_queue_size_);
+   
+  // /velodyne_points를 받으면 callback 함수 실행
   pointcloud_sub_ = nh_.subscribe("pointcloud", pointcloud_queue_size_,
-                                  &TsdfServer::insertPointcloud, this);
+                                  &TsdfServer::insertPointcloud, this); 
 
   mesh_pub_ = nh_private_.advertise<voxblox_msgs::Mesh>("mesh", 1, true);
 
@@ -350,6 +352,7 @@ bool TsdfServer::getNextPointcloudFromQueue(
   return false;
 }
 
+// '/velodyne_points' topic callback function
 void TsdfServer::insertPointcloud(
     const sensor_msgs::PointCloud2::Ptr& pointcloud_msg_in) {
   if (pointcloud_msg_in->header.stamp - last_msg_time_ptcloud_ >

@@ -12,6 +12,8 @@ EsdfServer::EsdfServer(const ros::NodeHandle& nh,
                  getTsdfMapConfigFromRosParam(nh_private),
                  getTsdfIntegratorConfigFromRosParam(nh_private),
                  getMeshIntegratorConfigFromRosParam(nh_private)) {}
+// esdf_server_node.cc에서 'EsdfServer' class의 'node' object 생성 -> 위의 생성자가 실행됨.
+// 근데 여기서 아래 생성자 오버로드도 같이 실행되게 함.
 
 EsdfServer::EsdfServer(const ros::NodeHandle& nh,
                        const ros::NodeHandle& nh_private,
@@ -21,13 +23,14 @@ EsdfServer::EsdfServer(const ros::NodeHandle& nh,
                        const TsdfIntegratorBase::Config& tsdf_integrator_config,
                        const MeshIntegratorConfig& mesh_config)
     : TsdfServer(nh, nh_private, tsdf_config, tsdf_integrator_config,
-                 mesh_config),
+                 mesh_config), // 부모 클래스 'TsdfServer' 생성자 호출
       clear_sphere_for_planning_(false),
-      publish_esdf_map_(false),
+      publish_esdf_map_(true),
       publish_traversable_(false),
       traversability_radius_(1.0),
       incremental_update_(true),
-      num_subscribers_esdf_map_(0) {
+      num_subscribers_esdf_map_(0) { // 멤버 변수 초기화
+      
   // Set up map and integrator.
   esdf_map_.reset(new EsdfMap(esdf_config));
   esdf_integrator_.reset(new EsdfIntegrator(esdf_integrator_config,
@@ -36,21 +39,33 @@ EsdfServer::EsdfServer(const ros::NodeHandle& nh,
 
   setupRos();
 }
+// 실제로 작동되는 부분은 위의 생성자가 다임.
 
-void EsdfServer::setupRos() {
+// SetupRos
+void EsdfServer::setupRos() { // publisher, subscriber 선언
+  
   // Set up publisher.
+  
+  // A pointcloud showing the values of all allocated ESDF voxels. Only appears if using 'esdf_server'.
   esdf_pointcloud_pub_ =
       nh_private_.advertise<pcl::PointCloud<pcl::PointXYZI> >("esdf_pointcloud",
                                                               1, true);
+  
+  // Ouputs a 2D horizontal slice of the ESDF colored by the stored distance value. Only appears if using 'esdf_server'.
   esdf_slice_pub_ = nh_private_.advertise<pcl::PointCloud<pcl::PointXYZI> >(
       "esdf_slice", 1, true);
+  
+  // (ESDF server only) Outputs all the points within the map that are considered traversable, controlled by the 'publish_traversable' and 'traversability_radius' parameters
   traversable_pub_ = nh_private_.advertise<pcl::PointCloud<pcl::PointXYZI> >(
       "traversable", 1, true);
 
+  // Publishes the entire ESDF layer to update other nodes (that listen on esdf_layer_in). Only published if 'publish_esdf_map' is set to true
   esdf_map_pub_ =
       nh_private_.advertise<voxblox_msgs::Layer>("esdf_map_out", 1, false);
 
   // Set up subscriber.
+  
+  // Replaces the current ESDF layer with that from this topic. Voxel size and voxels per side should match.
   esdf_map_sub_ = nh_private_.subscribe("esdf_map_in", 1,
                                         &EsdfServer::esdfMapCallback, this);
 
@@ -78,7 +93,8 @@ void EsdfServer::setupRos() {
   }
 }
 
-void EsdfServer::publishAllUpdatedEsdfVoxels() {
+// esdf_pointcloud publish하는 함수.
+void EsdfServer::publishAllUpdatedEsdfVoxels() { 
   // Create a pointcloud with distance = intensity.
   pcl::PointCloud<pcl::PointXYZI> pointcloud;
 
@@ -88,7 +104,8 @@ void EsdfServer::publishAllUpdatedEsdfVoxels() {
   esdf_pointcloud_pub_.publish(pointcloud);
 }
 
-void EsdfServer::publishSlices() {
+// esdf_slice publish하는 함수.
+void EsdfServer::publishSlices() { 
   TsdfServer::publishSlices();
 
   pcl::PointCloud<pcl::PointXYZI> pointcloud;
@@ -101,9 +118,10 @@ void EsdfServer::publishSlices() {
   esdf_slice_pub_.publish(pointcloud);
 }
 
+// generate_esdf service callback function
 bool EsdfServer::generateEsdfCallback(
     std_srvs::Empty::Request& /*request*/,      // NOLINT
-    std_srvs::Empty::Response& /*response*/) {  // NOLINT
+    std_srvs::Empty::Response& /*response*/) {  // NOLINT 내가 설정하는게 아니라 ros에서 제공하는 namespace임. 비어있는 trigger 역할
   const bool clear_esdf = true;
   if (clear_esdf) {
     esdf_integrator_->updateFromTsdfLayerBatch();
@@ -111,8 +129,8 @@ bool EsdfServer::generateEsdfCallback(
     const bool clear_updated_flag = true;
     esdf_integrator_->updateFromTsdfLayer(clear_updated_flag);
   }
-  publishAllUpdatedEsdfVoxels();
-  publishSlices();
+  publishAllUpdatedEsdfVoxels(); // esdf_pointcloud publish 하는 함수.
+  publishSlices(); // esdf_slice publish 하는 함수.
   return true;
 }
 
@@ -121,19 +139,19 @@ void EsdfServer::updateEsdfEvent(const ros::TimerEvent& /*event*/) {
 }
 
 void EsdfServer::publishPointclouds() {
-  publishAllUpdatedEsdfVoxels();
-  if (publish_slices_) {
-    publishSlices();
+  publishAllUpdatedEsdfVoxels(); // 여기서 publoshAllupdatedEsdfVoxels()를 실행함. esdf_pointcloud publish
+  if (publish_slices_) { // publish_slices_ 가 true면 <- tsdf_server.cc에 있음.
+    publishSlices(); // 여기서 publishSlices를 실행함. esdf_slice publish
   }
 
-  if (publish_traversable_) {
-    publishTraversable();
+  if (publish_traversable_) { // publish_traversable_ 이 true면
+    publishTraversable(); // 여기서 publishTraversable를 실행함. traversable publish
   }
 
-  TsdfServer::publishPointclouds();
+  TsdfServer::publishPointclouds(); // tsdf_pointcloud, surface_pointcloud, occupied_nodes, tsdf_slice publish
 }
 
-void EsdfServer::publishTraversable() {
+void EsdfServer::publishTraversable() { // traversable publish하는 함수.
   pcl::PointCloud<pcl::PointXYZI> pointcloud;
   createFreePointcloudFromEsdfLayer(esdf_map_->getEsdfLayer(),
                                     traversability_radius_, &pointcloud);
@@ -230,6 +248,7 @@ void EsdfServer::newPoseCallback(const Transformation& T_G_C) {
   block_remove_timer.Stop();
 }
 
+// esdf_map_in Subscribed Topic callback function
 void EsdfServer::esdfMapCallback(const voxblox_msgs::Layer& layer_msg) {
   timing::Timer receive_map_timer("map/receive_esdf");
 
