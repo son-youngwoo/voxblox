@@ -13,7 +13,7 @@ EsdfServer::EsdfServer(const ros::NodeHandle& nh,
                  getTsdfIntegratorConfigFromRosParam(nh_private),
                  getMeshIntegratorConfigFromRosParam(nh_private)) {}
 // esdf_server_node.cc에서 'EsdfServer' class의 'node' object 생성 -> 위의 생성자가 실행됨.
-// 근데 여기서 아래 생성자 오버로드도 같이 실행되게 함.
+// 근데 여기서 아래 생성자 오버로딩도 같이 실행되게 함.
 
 EsdfServer::EsdfServer(const ros::NodeHandle& nh,
                        const ros::NodeHandle& nh_private,
@@ -24,11 +24,11 @@ EsdfServer::EsdfServer(const ros::NodeHandle& nh,
                        const MeshIntegratorConfig& mesh_config)
     : TsdfServer(nh, nh_private, tsdf_config, tsdf_integrator_config,
                  mesh_config), // 부모 클래스 'TsdfServer' 생성자 호출
-      clear_sphere_for_planning_(false),
-      publish_esdf_map_(true),
-      publish_traversable_(false),
+      clear_sphere_for_planning_(false), //2 important false->t
+      publish_esdf_map_(true), //1 true->
+      publish_traversable_(true),
       traversability_radius_(1.0),
-      incremental_update_(true),
+      incremental_update_(false),// true일때 잘됐음.
       num_subscribers_esdf_map_(0) { // 멤버 변수 초기화
       
   // Set up map and integrator.

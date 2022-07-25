@@ -13,7 +13,7 @@
 namespace voxblox {
 
 class EsdfServer : public TsdfServer {
- public:
+ public: 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   EsdfServer(const ros::NodeHandle& nh, const ros::NodeHandle& nh_private);
@@ -23,6 +23,7 @@ class EsdfServer : public TsdfServer {
              const TsdfMap::Config& tsdf_config,
              const TsdfIntegratorBase::Config& tsdf_integrator_config,
              const MeshIntegratorConfig& mesh_config);
+             
   virtual ~EsdfServer() {}
 
   bool generateEsdfCallback(std_srvs::Empty::Request& request,     // NOLINT

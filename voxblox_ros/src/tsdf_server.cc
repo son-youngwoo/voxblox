@@ -27,15 +27,15 @@ TsdfServer::TsdfServer(const ros::NodeHandle& nh,
       pose_corrected_frame_("pose_corrected"),
       max_block_distance_from_body_(std::numeric_limits<FloatingPoint>::max()),
       slice_level_(0.5),
-      use_freespace_pointcloud_(false),
+      use_freespace_pointcloud_(false), // false 
       color_map_(new RainbowColorMap()),
-      publish_pointclouds_on_update_(false),
-      publish_slices_(true),
+      publish_pointclouds_on_update_(false), // false 
+      publish_slices_(false),
       publish_pointclouds_(false),
       publish_tsdf_map_(false),
       cache_mesh_(false),
       enable_icp_(false),
-      accumulate_icp_corrections_(true),
+      accumulate_icp_corrections_(false), //  false
       pointcloud_queue_size_(1),
       num_subscribers_tsdf_map_(0),
       transformer_(nh, nh_private) {
@@ -388,6 +388,7 @@ void TsdfServer::insertPointcloud(
   }
 }
 
+// 장애물이 있다가 없어진 곳의 pointcloud를 없애주는 함수
 void TsdfServer::insertFreespacePointcloud(
     const sensor_msgs::PointCloud2::Ptr& pointcloud_msg_in) {
   if (pointcloud_msg_in->header.stamp - last_msg_time_freespace_ptcloud_ >

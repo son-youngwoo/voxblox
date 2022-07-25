@@ -43,6 +43,7 @@ class TsdfServer {
              const TsdfMap::Config& config,
              const TsdfIntegratorBase::Config& integrator_config,
              const MeshIntegratorConfig& mesh_config);
+             
   virtual ~TsdfServer() {}
 
   void getServerConfigFromRosParam(const ros::NodeHandle& nh_private);
